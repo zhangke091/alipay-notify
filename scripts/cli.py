@@ -103,12 +103,42 @@ def load_config():
 
 
 def save_config(cfg):
-    """保存配置到当前目录的 .alipay-notify.json。"""
+    """保存配置到当前目录的 .alipay-notify.json（权限 600，仅本人可读）。"""
     path = os.path.join(os.getcwd(), CONFIG_FILENAME)
     save_data = {k: v for k, v in cfg.items() if not k.startswith("_")}
-    with open(path, "w", encoding="utf-8") as f:
+    # 先写入，再收紧权限；避免其他用户读取 api_key
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(save_data, f, indent=2, ensure_ascii=False)
+
+    # 自动将配置文件加入 .gitignore（防止凭证意外提交）
+    _ensure_gitignore(path)
+
     return path
+
+
+def _ensure_gitignore(config_path):
+    """确保 .alipay-notify.json 在 .gitignore 中。"""
+    git_dir = os.path.dirname(config_path)
+    gitignore = os.path.join(git_dir, ".gitignore")
+    entry = CONFIG_FILENAME
+    try:
+        if os.path.isfile(gitignore):
+            with open(gitignore, "r", encoding="utf-8") as f:
+                content = f.read()
+            if entry in content.splitlines():
+                return  # 已存在
+            with open(gitignore, "a", encoding="utf-8") as f:
+                if not content.endswith("\n"):
+                    f.write("\n")
+                f.write(f"{entry}\n")
+        else:
+            # 仅当当前目录是 git 仓库或有 .git 目录时创建
+            if os.path.isdir(os.path.join(git_dir, ".git")):
+                with open(gitignore, "w", encoding="utf-8") as f:
+                    f.write(f"{entry}\n")
+    except OSError:
+        pass  # 写入失败不影响主流程
 
 
 def require_config(cfg, *keys):
@@ -322,6 +352,12 @@ def cmd_register(args):
         sys.exit(1)
     server_url = server_url.rstrip("/")
 
+    # 安全警告：HTTP 明文传输 api_key 有被截获风险
+    if server_url.startswith("http://") and "localhost" not in server_url and "127.0.0.1" not in server_url:
+        print(f"  {yellow('⚠ 当前使用 HTTP 明文连接，api_key 可能被中间人截获')}")
+        print(f"  {dim('  建议使用 HTTPS 地址，或仅在内网环境中使用')}")
+        print()
+
     name = args.name or ""
     if not name:
         name = input(f"  {cyan('你的名称')} (用于标识，如 dev-xiaoming): ").strip()
@@ -340,13 +376,17 @@ def cmd_register(args):
     resp = http_request("POST", f"{server_url}/api/register", body={"name": name})
     if resp["status"] not in (200, 201):
         err = api_json(resp) or {}
+        if resp["status"] == 409:
+            print(f"\n  {yellow('⚠ ' + err.get('message', '该 IP 或名称已注册'))}")
+            print(f"  {dim('凭证仅在首次注册时返回。如需找回，请联系管理员。')}")
+            print(f"  {dim('如果你已有配置文件，直接运行')} {bold('python3 cli.py listen')} {dim('即可')}\n")
+            sys.exit(1)
         print(red(f"  ✗ 注册失败: {err.get('message', resp['body'])}"))
         sys.exit(1)
 
     data = json.loads(resp["body"])
     notify_url = data["notify_url"]
     api_key = data["api_key"]
-    is_existing = resp["status"] == 200
 
     # 服务端未配置 PUBLIC_URL 时会返回 localhost，用 server_url 自动修正
     if "://localhost" in notify_url or "://127.0.0.1" in notify_url:
@@ -366,13 +406,8 @@ def cmd_register(args):
 
     saved_path = save_config(new_cfg)
 
-    # 输出结果（精简，详细引导由 SKILL.md 提供）
-    if is_existing:
-        msg = data.get("message", "已注册，返回已有凭证")
-        print(f"\n  {yellow('⚠ ' + msg)}")
-        print(f"  {dim('如需新凭证，请联系管理员重置。')}")
-    else:
-        print(f"\n  {green('✓ 注册成功！')}")
+    # 输出结果
+    print(f"\n  {green('✓ 注册成功！')}")
     print()
     print(f"  {bold('notify_url')}")
     print(f"  ┌{'─' * (len(notify_url) + 2)}┐")
@@ -382,7 +417,9 @@ def cmd_register(args):
     print(f"  {dim('api_key:  ')} {api_key[:16]}...{dim('(已保存)')}")
     print(f"  {dim('配置文件: ')} {saved_path}")
     print()
-    print(f"  {bold('下一步:')}") 
+    print(f"  {yellow('⚠ 请妥善保管凭证！凭证仅此一次显示，丢失后需联系管理员重置。')}")
+    print()
+    print(f"  {bold('下一步:')}")
     print(f"    1. 在调用支付下单接口时传入上面的 notify_url")
     print(f"    2. 运行 {cyan('python3 scripts/cli.py listen --auto-ack')} 实时监听")
     print()
@@ -733,7 +770,7 @@ def main():
 
     # register
     p_reg = sub.add_parser("register", help="自助注册，获取凭证")
-    p_reg.add_argument("--server", help="服务地址 (如 https://notify.example.com)")
+    p_reg.add_argument("--server", help="服务地址 (如 http://your-server:9010)")
     p_reg.add_argument("--name", help="开发者名称")
 
     # listen

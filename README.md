@@ -16,6 +16,7 @@
 
 ```
 支付宝 ──POST──► 云端中继 ──SSE──► 本地 CLI 实时拉取
+                            └───► 浏览器查看器（dev.html）
 ```
 
 ---
@@ -25,19 +26,19 @@
 不需要 AI Agent，直接在终端跑 3 条命令就能收到支付宝异步通知：
 
 ```bash
-# 1. 注册，获取你的专属 notify_url
-python3 scripts/cli.py register --server http://8.136.213.223:9010 --name my-dev
+# 1. 注册，获取你的专属 notify_url（服务地址向管理员获取）
+python3 scripts/cli.py register --server http://<your-server>:9010 --name my-dev
 
 # 输出示例：
 # ✓ 注册成功！
 # notify_url
 # ┌──────────────────────────────────────────────────────────────────┐
-# │ http://8.136.213.223:9010/notify/ca2ce77c11b14b21804259c9cdb99dbb │
+# │ http://<your-server>:9010/notify/<your-token>                    │
 # └──────────────────────────────────────────────────────────────────┘
 
 # 2. 把 notify_url 传入支付宝下单接口（不是在开放平台控制台配置）
-#    Java:   request.setNotifyUrl("http://8.136.213.223:9010/notify/<你的token>");
-#    Python: client.page_execute(request, notify_url="http://8.136.213.223:9010/notify/<你的token>")
+#    Java:   request.setNotifyUrl("<输出的 notify_url>");
+#    Python: client.page_execute(request, notify_url="<输出的 notify_url>")
 
 # 3. 开始监听，支付成功后通知实时到达
 python3 scripts/cli.py listen
@@ -63,6 +64,8 @@ python3 scripts/cli.py export 1          # 导出原始报文
 python3 scripts/cli.py verify 1          # RSA2 验签（需 pip install cryptography）
 python3 scripts/cli.py ack 1             # 确认通知，停止支付宝重试
 ```
+
+**浏览器查看器**：访问 `http://<your-server>:9010/dev.html`，用 API Key 登录后可实时查看通知、金额、状态，支持原始报文复制和 ACK 确认。
 
 ---
 
@@ -103,7 +106,7 @@ git clone https://github.com/zhangke091/alipay-notify .cursor/skills/alipay-noti
 ```bash
 git clone https://github.com/zhangke091/alipay-notify
 cd alipay-notify
-python3 scripts/cli.py register --server http://8.136.213.223:9010 --name my-dev
+python3 scripts/cli.py register --server http://<your-server>:9010 --name my-dev
 ```
 
 ## 前置条件
@@ -116,8 +119,9 @@ python3 scripts/cli.py register --server http://8.136.213.223:9010 --name my-dev
 
 | 机制 | 说明 |
 |------|------|
-| **云端只做转发** | 中继服务接收支付宝 POST，原样存储 `raw_body`，通过 SSE 推送到你的本地 CLI |
+| **云端只做转发** | 中继服务接收支付宝 POST，原样存储 `raw_body`，通过 SSE 推送到你的本地 CLI 或浏览器 |
 | **租户完全隔离** | 每个开发者独立 token + API Key，无法访问他人数据 |
+| **凭证安全** | 注册凭证仅在首次注册时返回，重复注册不会泄露已有凭证 |
 | **验签在本地** | 支付宝公钥只保存在你本地的 `.alipay-notify.json`，云端不存任何密钥 |
 | **自动清除** | 通知保留 1 天后自动删除，每租户最多 200 条 |
 | **仅限联调** | 不可用于生产环境，仅供开发调试使用 |
@@ -133,8 +137,8 @@ python3 scripts/cli.py register --server http://8.136.213.223:9010 --name my-dev
 ## 限制
 
 - **仅限联调 / 沙箱 / 内部调试**，不可用于生产环境
-- 每个 IP 限注册 1 次
-- 通知保留 1 天，每租户最多 200 条
+- 每个 IP 限注册 1 次，凭证丢失请联系管理员
+- 通知保留 7 天，每租户最多 200 条
 
 ## License
 

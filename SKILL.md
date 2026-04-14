@@ -18,10 +18,15 @@ description: >-
 ```
 支付宝 ──POST──► 云端中继 /notify/<token>
                        │
-                       └──► 开发者本机 CLI 实时拉取
-                             ├─ 查看原始报文
-                             ├─ RSA2 验签
-                             └─ 对接本地业务逻辑
+                       ├─► 开发者本机 CLI 实时拉取
+                       │     ├─ 查看原始报文
+                       │     ├─ RSA2 验签
+                       │     └─ 对接本地业务逻辑
+                       │
+                       └─► 浏览器查看器（dev.html）
+                             ├─ 实时推送
+                             ├─ 通知列表 + 金额展示
+                             └─ 原始报文查看 / 复制
 ```
 
 ## Skill 目录结构
@@ -54,6 +59,7 @@ python3 "$SKILL_DIR/scripts/cli.py" <command> [args]
 - Python 3.6+（macOS/Linux 自带）
 - 验签（可选）需额外安装：`pip install cryptography`
 - **无需部署服务端** — 中继服务已在云端运行，安装 Skill 后直接用 CLI 注册即可
+- 服务地址通过 `--server` 参数或环境变量 `NOTIFY_API_URL` 配置
 
 ---
 
@@ -63,16 +69,16 @@ python3 "$SKILL_DIR/scripts/cli.py" <command> [args]
 
 Agent 执行：
 ```bash
-python3 "$SKILL_DIR/scripts/cli.py" register --server http://8.136.213.223:9010 --name <开发者名称>
+python3 "$SKILL_DIR/scripts/cli.py" register --server <服务地址> --name <开发者名称>
 ```
 
-- 默认中继服务地址：`http://8.136.213.223:9010`
+- 服务地址示例：`http://your-server:9010`（向开发者查询具体地址）
 - 如果配置文件中已有 `server_url`，可省略 `--server`
 - 不带任何参数则进入交互式引导
 
 输出 `notify_url`，开发者将其传入支付下单接口即可。
 
-> 同一 IP 只能注册一次。重复执行返回已有凭证。
+> 同一 IP 只能注册一次。重复注册会返回提示而不是凭证，需联系管理员找回。
 
 ### Step 2：支付接口传入 notify_url
 
@@ -105,6 +111,8 @@ python3 "$SKILL_DIR/scripts/cli.py" get <id>
 python3 "$SKILL_DIR/scripts/cli.py" export <id> && cat notify_<id>.txt
 ```
 
+**浏览器查看器**（可选）：直接访问 `<服务地址>/dev.html` 可在浏览器中实时查看通知，支持金额展示、原始报文复制、ACK 确认等。
+
 > **ack 策略**：`listen` 默认不加 `--auto-ack`，避免自动确认导致支付宝停止重试。
 > 仅当开发者明确要求「自动确认」时才使用 `listen --auto-ack`。
 > 手动确认单条：`python3 "$SKILL_DIR/scripts/cli.py" ack <id>`
@@ -129,10 +137,7 @@ python3 "$SKILL_DIR/scripts/cli.py" verify <id>
 ### Step 5：重新获取异步地址 / 查询通知
 
 ```bash
-# 重新获取（返回已有凭证）
-python3 "$SKILL_DIR/scripts/cli.py" register
-
-# 查看本地配置
+# 查看本地配置（含 notify_url）
 python3 "$SKILL_DIR/scripts/cli.py" config
 
 # 查询通知列表
