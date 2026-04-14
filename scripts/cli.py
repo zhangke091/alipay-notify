@@ -346,7 +346,7 @@ def cmd_register(args):
     # 交互式输入
     server_url = args.server or cfg.get("server_url") or ""
     if not server_url:
-        server_url = input(f"  {cyan('服务地址')} (如 https://notify.example.com): ").strip()
+        server_url = input(f"  {cyan('服务地址')} (如 https://www.opensupport.cc): ").strip()
     if not server_url:
         print(red("  ✗ 服务地址不能为空"))
         sys.exit(1)
@@ -421,7 +421,7 @@ def cmd_register(args):
     print()
     print(f"  {bold('下一步:')}")
     print(f"    1. 在调用支付下单接口时传入上面的 notify_url")
-    print(f"    2. 运行 {cyan('python3 scripts/cli.py listen --auto-ack')} 实时监听")
+    print(f"    2. 运行 {cyan('python3 scripts/cli.py listen')} 实时监听")
     print()
 
 
@@ -641,7 +641,7 @@ def cmd_verify(args):
 
 
 # ═══════════════════════════════════════════════════════════
-# 命令：export
+# 命令：ack
 # ═══════════════════════════════════════════════════════════
 
 def cmd_ack(args):
@@ -770,7 +770,7 @@ def main():
 
     # register
     p_reg = sub.add_parser("register", help="自助注册，获取凭证")
-    p_reg.add_argument("--server", help="服务地址 (如 http://your-server:9010)")
+    p_reg.add_argument("--server", help="服务地址 (如 https://www.opensupport.cc)")
     p_reg.add_argument("--name", help="开发者名称")
 
     # listen

@@ -4,6 +4,7 @@ description: >-
   支付宝异步通知中继：本地开发无公网 IP 也能收到支付宝异步通知。
   Skill 自包含 CLI 脚本，安装后 Agent 自动执行注册 → 获取 notify_url → 实时监听 → 查看原始报文 → 本地验签全流程。
   仅依赖 Python 3，无需部署服务端。仅限联调环境。
+  服务端支持 HTTPS（TLS 1.3）+ 域名访问。
 ---
 
 # 支付宝异步通知中继
@@ -32,7 +33,7 @@ description: >-
 ## Skill 目录结构
 
 ```
-alipay-notify-relay/
+alipay-notify/
 ├── SKILL.md           # 本文件（Agent 指令）
 └── scripts/
     └── cli.py         # CLI 工具（注册/监听/查询/验签/导出）
@@ -58,8 +59,7 @@ python3 "$SKILL_DIR/scripts/cli.py" <command> [args]
 
 - Python 3.6+（macOS/Linux 自带）
 - 验签（可选）需额外安装：`pip install cryptography`
-- **无需部署服务端** — 中继服务已在云端运行，安装 Skill 后直接用 CLI 注册即可
-- 服务地址通过 `--server` 参数或环境变量 `NOTIFY_API_URL` 配置
+- **无需部署服务端** — 中继服务已在云端运行（`https://www.opensupport.cc`），安装 Skill 后直接用 CLI 注册即可
 
 ---
 
@@ -72,7 +72,7 @@ Agent 执行：
 python3 "$SKILL_DIR/scripts/cli.py" register --server <服务地址> --name <开发者名称>
 ```
 
-- 服务地址示例：`http://your-server:9010`（向开发者查询具体地址）
+- 服务地址：`https://www.opensupport.cc`
 - 如果配置文件中已有 `server_url`，可省略 `--server`
 - 不带任何参数则进入交互式引导
 
@@ -111,7 +111,7 @@ python3 "$SKILL_DIR/scripts/cli.py" get <id>
 python3 "$SKILL_DIR/scripts/cli.py" export <id> && cat notify_<id>.txt
 ```
 
-**浏览器查看器**（可选）：直接访问 `<服务地址>/dev.html` 可在浏览器中实时查看通知，支持金额展示、原始报文复制、ACK 确认等。
+**浏览器查看器**（可选）：直接访问 `https://www.opensupport.cc/dev.html` 可在浏览器中实时查看通知，支持金额展示、原始报文复制、ACK 确认等。
 
 > **ack 策略**：`listen` 默认不加 `--auto-ack`，避免自动确认导致支付宝停止重试。
 > 仅当开发者明确要求「自动确认」时才使用 `listen --auto-ack`。

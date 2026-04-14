@@ -5,7 +5,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/zhangke091/alipay-notify)](https://github.com/zhangke091/alipay-notify/releases)
 
 **免费提供公网异步通知地址**，让本地开发环境也能实时接收支付宝异步通知（`notify_url`）。
-无需自建服务、无需公网 IP、无需内网穿透，注册即用。
+无需自建服务、无需公网 IP、无需内网穿透，注册即用。服务端支持 HTTPS（TLS 1.3）+ 域名访问。
 
 ### 适用场景
 
@@ -27,13 +27,13 @@
 
 ```bash
 # 1. 注册，获取你的专属 notify_url（服务地址向管理员获取）
-python3 scripts/cli.py register --server http://<your-server>:9010 --name my-dev
+python3 scripts/cli.py register --server https://www.opensupport.cc --name my-dev
 
 # 输出示例：
 # ✓ 注册成功！
 # notify_url
 # ┌──────────────────────────────────────────────────────────────────┐
-# │ http://<your-server>:9010/notify/<your-token>                    │
+# │ https://www.opensupport.cc/notify/<your-token>                  │
 # └──────────────────────────────────────────────────────────────────┘
 
 # 2. 把 notify_url 传入支付宝下单接口（不是在开放平台控制台配置）
@@ -65,7 +65,7 @@ python3 scripts/cli.py verify 1          # RSA2 验签（需 pip install cryptog
 python3 scripts/cli.py ack 1             # 确认通知，停止支付宝重试
 ```
 
-**浏览器查看器**：访问 `http://<your-server>:9010/dev.html`，用 API Key 登录后可实时查看通知、金额、状态，支持原始报文复制和 ACK 确认。
+**浏览器查看器**：访问 `https://www.opensupport.cc/dev.html`，用 API Key 登录后可实时查看通知、金额、状态，支持原始报文复制和 ACK 确认。
 
 ---
 
@@ -106,19 +106,20 @@ git clone https://github.com/zhangke091/alipay-notify .cursor/skills/alipay-noti
 ```bash
 git clone https://github.com/zhangke091/alipay-notify
 cd alipay-notify
-python3 scripts/cli.py register --server http://<your-server>:9010 --name my-dev
+python3 scripts/cli.py register --server https://www.opensupport.cc --name my-dev
 ```
 
 ## 前置条件
 
 - Python 3.6+（macOS / Linux 自带）
 - 验签（可选）需额外安装：`pip install cryptography`
-- **无需部署服务端** — 中继服务已在云端运行
+- **无需部署服务端** — 中继服务已在 `https://www.opensupport.cc` 运行
 
 ## 数据安全
 
 | 机制 | 说明 |
 |------|------|
+| **传输加密** | 服务端支持 HTTPS（TLS 1.3），Let's Encrypt 证书自动续期，所有 API 调用和通知接收均加密传输 |
 | **云端只做转发** | 中继服务接收支付宝 POST，原样存储 `raw_body`，通过 SSE 推送到你的本地 CLI 或浏览器 |
 | **租户完全隔离** | 每个开发者独立 token + API Key，无法访问他人数据 |
 | **凭证安全** | 注册凭证仅在首次注册时返回，重复注册不会泄露已有凭证 |
@@ -138,7 +139,7 @@ python3 scripts/cli.py register --server http://<your-server>:9010 --name my-dev
 
 - **仅限联调 / 沙箱 / 内部调试**，不可用于生产环境
 - 每个 IP 限注册 1 次，凭证丢失请联系管理员
-- 通知保留 7 天，每租户最多 200 条
+- 通知保留 1 天，每租户最多 200 条
 
 ## License
 
