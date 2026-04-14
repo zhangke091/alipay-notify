@@ -1,5 +1,5 @@
 ---
-name: alipay-notify-relay
+name: alipay-notify
 description: >-
   支付宝异步通知中继：本地开发无公网 IP 也能收到支付宝异步通知。
   Skill 自包含 CLI 脚本，安装后 Agent 自动执行注册 → 获取 notify_url → 实时监听 → 查看原始报文 → 本地验签全流程。
